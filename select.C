@@ -36,9 +36,31 @@ const Status QU_Select(const string & result,
 		       const Operator op, 
 		       const char *attrValue)
 {
-   // Qu_Select sets up things and then calls ScanSelect to do the actual work
-    cout << "Doing QU_Select " << endl;
+  Status status;
+ // Qu_Select sets up things and then calls ScanSelect to do the actual work
+  cout << "Doing QU_Select " << endl;
+  AttrDesc attrDescArray[projCnt];
+  for(int i = 0; i < projCnt; i++){
+    status = attrCat->getInfo(projNames[i].relName, projNames[i].attrName, attrDescArray[i]);
+    if (status != OK) return status;
+  }
+  
+  AttrDesc attrDesc;
+  status = attrCat->getInfo(attr->relName, attr->attrName, attrDesc);
+  if (status != OK) return status;
 
+
+  int reclen = 0;
+  for (int i = 0; i < projCnt; i++)
+  {
+      reclen += attrDescArray[i].attrLen;
+  }
+
+  ScanSelect(result, projCnt, attrDesc.relName, attrValue, op, filter, reclen);
+
+  InsertFileScan resultRel(result, status);
+
+  return status;
 }
 
 
@@ -52,7 +74,16 @@ const Status ScanSelect(const string & result,
 			const char *filter,
 			const int reclen)
 {
-    cout << "Doing HeapFileScan Selection using ScanSelect()" << endl;
+  cout << "Doing HeapFileScan Selection using ScanSelect()" << endl;
+  Status status;
+  HeapFileScan *hfs;
+
+  string relName;
+  strcpy(relName, attrDesc.relName);
+  hfs = new HeapFileScan(relName, status);
+  if (status != OK) return status;
+
+  status = hfs->startScan(attrDesc.attrOffset, attrDesc.attrLen, attrDesc.attrType, filter, op);
 
 
 }

@@ -18,11 +18,15 @@ const Status QU_Delete(const string & relation,
 		       const Datatype type, 
 		       const char *attrValue)
 {
-// part 6
-return OK;
+  Status status;
+  HeapFileScan *hfs;
+
+  hfs = new HeapFileScan(relation, status);
+  status = hfs->startScan(, sizeof(attrValue), type, attrValue, op);
+
+  return status;
 
 
 
 }
-
 

@@ -61,7 +61,7 @@ const Status QU_NL_Join(const string & result,
     {
         return status;
     }
-    // get AttrDesc structure for the first join attribute
+    // get AttrDesc structure for the second join attribute
     AttrDesc attrDesc2;
     status = attrCat->getInfo(attr2->relName,
                               attr2->attrName,
