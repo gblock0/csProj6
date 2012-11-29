@@ -39,26 +39,45 @@ const Status QU_Select(const string & result,
   Status status;
  // Qu_Select sets up things and then calls ScanSelect to do the actual work
   cout << "Doing QU_Select " << endl;
-  AttrDesc attrDescArray[projCnt];
-  for(int i = 0; i < projCnt; i++){
-    status = attrCat->getInfo(projNames[i].relName, projNames[i].attrName, attrDescArray[i]);
-    if (status != OK) return status;
-  }
-  
-  AttrDesc attrDesc;
-  status = attrCat->getInfo(attr->relName, attr->attrName, attrDesc);
+
+
+  /*
+   * 1. Convert projnames to AttrDesc and convert attr to AttrDesc
+   *  a. getRelInfo to get an attrs array which we can then check the attrName of the original arrays against
+   *  b. If the attrName is the same add the info from attrs to the appropriate array
+   * 2. convert attrValue to int and set to reclen using atoi
+   * 3. Call ScanSelect
+   */
+
+
+  int attrCnt;
+  AttrDesc *attrs;
+  AttrDesc projNamesArray[projCnt];
+  AttrDesc *attrDesc;
+  status = attrCat->getRelInfo(attr[0].relName, attrCnt, attrs);
   if (status != OK) return status;
 
-
-  int reclen = 0;
-  for (int i = 0; i < projCnt; i++)
-  {
-      reclen += attrDescArray[i].attrLen;
+  //Making the new projNames array for AttrDescs
+  for(int i = 0; i < attrCnt; i++){
+    for(int j = 0; j < projCnt; j++){
+      if(projNames[j].attrName == attrs[i].attrName){
+        memcpy(&projNamesArray[i], &attrs[i], sizeof(attrs[i]));
+      }
+    }
   }
 
-  ScanSelect(result, projCnt, attrDesc.relName, attrValue, op, filter, reclen);
+  //Making the new attr array for AttrDesc
+  for(int i = 0; i < attrCnt; i++){
+    for(int j = 0; j < sizeof(attr); j++){
+      if(attr[j].attrName == attrs[i].attrName){
+        memcpy(&attrDesc[i], &attrs[i], sizeof(attr[i]));
+      }
+    }
+  }
 
-  InsertFileScan resultRel(result, status);
+  int reclen = atoi(attrValue);
+
+  status = ScanSelect(result, projCnt, projNamesArray, attrDesc, op, attrValue, reclen);
 
   return status;
 }
@@ -76,14 +95,25 @@ const Status ScanSelect(const string & result,
 {
   cout << "Doing HeapFileScan Selection using ScanSelect()" << endl;
   Status status;
+
   HeapFileScan *hfs;
+  AttrDesc record;
+  RID rid;
 
-  string relName;
-  strcpy(relName, attrDesc.relName);
-  hfs = new HeapFileScan(relName, status);
-  if (status != OK) return status;
+  hfs = new HeapFileScan(attrDesc[0].relName, status);
 
-  status = hfs->startScan(attrDesc.attrOffset, attrDesc.attrLen, attrDesc.attrType, filter, op);
+  for(int i = 0; i < sizeof(attrDesc); i++){
+    //Start HFS on the relation table
+    status = hfs->startScan(attrDesc[i].attrOffset, attrDesc[i].attrLen, attrDesc[i].attrType, filter, op);
+    if(status != OK) return status;
 
+    while((status = hfs->scanNext(rid)) == OK){
+      
+      //Delete record if found in relation table
+      status = hfs->deleteRecord();
+      if(status != OK) return status;
+    }
+  }
+  
 
 }
