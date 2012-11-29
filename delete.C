@@ -20,9 +20,30 @@ const Status QU_Delete(const string & relation,
 {
   Status status;
   HeapFileScan *hfs;
+  AttrDesc record;
+  RID rid;
 
   hfs = new HeapFileScan(relation, status);
-  status = hfs->startScan(, sizeof(attrValue), type, attrValue, op);
+
+  //Get the AttrDesc from the attrCat table
+  status = attrCat->getInfo(relation, attrName, record);
+  if (status != OK) return status;
+
+  //Start HFS on the relation table
+  status = hfs->startScan(record.attrOffset, record.attrLen, type, attrValue, op);
+  if(status != OK) return status;
+
+  while((status = hfs->scanNext(rid)) == OK){
+    
+    //Delete record if found in relation table
+    status = hfs->deleteRecord();
+    if(status != OK) return status;
+  }
+  
+  //If end of file then return attribute not found
+  if (status == FILEEOF){
+    status = ATTRNOTFOUND;
+  }
 
   return status;
 
