@@ -104,13 +104,16 @@ const Status ScanSelect(const string & result,
 
   for(int i = 0; i < sizeof(attrDesc); i++){
     //Start HFS on the relation table
-    status = hfs->startScan(attrDesc[i].attrOffset, attrDesc[i].attrLen, attrDesc[i].attrType, filter, op);
+    status = hfs->startScan(attrDesc[i].attrOffset, attrDesc[i].attrLen, (Datatype) attrDesc[i].attrType, filter, op);
     if(status != OK) return status;
 
+    //How to do the insert?
     while((status = hfs->scanNext(rid)) == OK){
-      
-      //Delete record if found in relation table
-      status = hfs->deleteRecord();
+      //do something
+      //get record
+      //have the tuples
+      //Construct record into record memcpy things from tuple
+      //instruct insertRecord
       if(status != OK) return status;
     }
   }
