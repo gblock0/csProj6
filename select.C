@@ -54,18 +54,36 @@ const Status QU_Select(const string & result,
   AttrDesc *attrs;
   AttrDesc projNamesArray[projCnt];
   AttrDesc *attrDesc;
+  int reclen = 0;
+
+  //i think this should be done on the result table
   status = attrCat->getRelInfo(attr[0].relName, attrCnt, attrs);
   if (status != OK) return status;
 
   //Making the new projNames array for AttrDescs
+  //converting the projNames attrInfo array into an array of AttrDesc
+  //may not be needed, because what does ordering actually do?
+        //we do need to convert them to attrDesc
   for(int i = 0; i < attrCnt; i++){
     for(int j = 0; j < projCnt; j++){
       if(projNames[j].attrName == attrs[i].attrName){
         memcpy(&projNamesArray[i], &attrs[i], sizeof(attrs[i]));
+        //length of a record in our projection talbe
+        reclen += attrs[i].attrLen;
       }
     }
   }
 
+  //convert the attr
+  for(int i = 0; i < attrCnt; i++){
+    if(attr->attrName == attrs[i].attrName){
+      memcpy(attrDesc, &attrs[i], sizeof(attrDesc));
+      break;
+    }
+  }
+    
+  /*
+   //we decided this wasn't needed because attrDesc isn't an array
   //Making the new attr array for AttrDesc
   for(int i = 0; i < attrCnt; i++){
     for(int j = 0; j < sizeof(attr); j++){
@@ -74,9 +92,10 @@ const Status QU_Select(const string & result,
       }
     }
   }
+  */
 
-  int reclen = atoi(attrValue);
-
+  //int reclen = atoi(attrValue);
+    
   status = ScanSelect(result, projCnt, projNamesArray, attrDesc, op, attrValue, reclen);
 
   return status;
@@ -98,10 +117,50 @@ const Status ScanSelect(const string & result,
 
   HeapFileScan *hfs;
   AttrDesc record;
+  Record rec;
   RID rid;
+  int offset;
+  void *tuple;
 
-  hfs = new HeapFileScan(attrDesc[0].relName, status);
+  hfs = new HeapFileScan(attrDesc->relName, status);
+  if(status != OK) return status;
 
+  //start scan seraching for the attrDesc that matches the filter and op
+  status = hfs->startScan(attrDesc->attrOffset,attrDesc->length, attrDesc->attrType, filter, op);
+
+  //white not at the end of the file
+  while((status = hfs->scanNext(rid)) != FILEEOF)
+  {
+    if(status != OK) return status;
+      
+    //get the next tuple that matches our condition
+    status = hfs->getRecord(rec);
+    if(status != OK) return status;
+    
+    //get a piece of memeory the size of a record
+    tuple = malloc(reclen);
+    if (tuple == NULL) {
+      //TO DO put in a malloc error for status
+      return (status = "MALLOC ERROR");
+    }
+    
+    //for each projection add the value into our tuple
+    //assumes that projNames is in sorted order 
+    //do some sort of loop that correctly matches the values needed from the
+    //whole record to the values stated in project count. 
+    //do this in the loop: "mempy(tuple+offset, proj[i].value, proj[i].legnth);
+      //                    offset += offset proj[i].length;
+      //then the new record will only the the needed info for the projects
+      //but also note that the order of the information added to the tuple
+      //must match the order that the result table was created with
+
+      
+      
+      
+  }
+  //insert the record
+    
+  /*
   for(int i = 0; i < sizeof(attrDesc); i++){
     //Start HFS on the relation table
     status = hfs->startScan(attrDesc[i].attrOffset, attrDesc[i].attrLen, (Datatype) attrDesc[i].attrType, filter, op);
@@ -109,6 +168,7 @@ const Status ScanSelect(const string & result,
 
     //How to do the insert?
     while((status = hfs->scanNext(rid)) == OK){
+      
       //do something
       //get record
       //have the tuples
@@ -117,6 +177,7 @@ const Status ScanSelect(const string & result,
       if(status != OK) return status;
     }
   }
+   */
   
 
 }
