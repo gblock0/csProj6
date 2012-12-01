@@ -41,6 +41,8 @@ const Status QU_Select(const string & result,
   cout << "Doing QU_Select " << endl;
 
 
+    //what if attrValue == NULL
+    
   /*
    * 1. Convert projnames to AttrDesc and convert attr to AttrDesc
    *  a. getRelInfo to get an attrs array which we can then check the attrName of the original arrays against
@@ -55,7 +57,7 @@ const Status QU_Select(const string & result,
   AttrDesc projNamesArray[projCnt];
   AttrDesc *attrDesc;
   int reclen = 0;
-
+    
   //i think this should be done on the result table
   status = attrCat->getRelInfo(result, attrCnt, attrs);
   if (status != OK) return status;
@@ -65,18 +67,22 @@ const Status QU_Select(const string & result,
   for(int i = 0; i < projCnt; i++){
     for(int j = 0; j < attrCnt; j++){
       if(projNames[i].attrName == attrs[j].attrName){
-        memcpy(&projNamesArray[j], &attrs[j], sizeof(attrs[j]));
+        memcpy(&(projNamesArray[j]), &(attrs[j]), sizeof(AttrDesc));
         //length of a record in our projection talbe
         reclen += attrs[j].attrLen;
       }
     }
   }
 
-  //convert the attr
-  for(int i = 0; i < attrCnt; i++){
-    if(attr->attrName == attrs[i].attrName){
-      memcpy(attrDesc, &attrs[i], sizeof(attrDesc));
-      break;
+  //if attr is NULL we still need an attrDesc over so we have relation name
+  if(attr == NULL){
+    memcpy(attrDesc, &(attrs[0]), sizeof(AttrDesc));
+  } else {  
+    //else we need to find the matching attrDesc to convert from info to desc
+    for(int i = 0; i < attrCnt; i++){
+      if(attr->attrName == attrs[i].attrName){
+        memcpy(attrDesc, &(attrs[i]), sizeof(AttrDesc));
+      }
     }
   }
     
@@ -111,23 +117,35 @@ const Status ScanSelect(const string & result,
   void *tuple;
   int attrCnt;
   AttrDesc *attrs;
-
-  hfs = new HeapFileScan(attrDesc->relName, status);
-  if(status != OK) return status;
+    
+  //convert from C string to C++ String
+  string strBTRelName(attrDesc->relName);
+    
+  hfs = new HeapFileScan(strBTRelName, status);
+  if(status != OK) {return status;}
   
   ifs = new InsertFileScan(result, status);
   if(status != OK) return status;
 
+    
+    cout << "clear skys" << endl;
+    
   //start scan seraching for the attrDesc that matches the filter and op
   status = hfs->startScan(attrDesc->attrOffset,attrDesc->attrLen, (Datatype) attrDesc->attrType, filter, op);
-  if(status != OK) return status;
+    if(status != OK){ 
+        cout << "bad weather " << endl; 
+        return status;}
     
-  status = attrCat->getRelInfo(attrDesc->relName, attrCnt, attrs);
-  if (status != OK) return status;
+  status = attrCat->getRelInfo(strBTRelName, attrCnt, attrs);
+    if (status != OK){
+        cout << attrDesc->relName[0] <<endl;
+        cout << "broken mast " << endl; 
+        return status;}
 
   //white not at the end of the file
   while((status = hfs->scanNext(rid)) != FILEEOF)
   {
+      cout << "land ho!" << endl;
     if(status != OK) return status;
       
     //get the next tuple that matches our condition
@@ -160,6 +178,9 @@ const Status ScanSelect(const string & result,
     if(status != OK) return status;
     free(tuple);
   }   
+   
+  //status was used as loop varient, reset status to be OK
+  if(status == FILEEOF) status = OK;
   
   delete hfs;
   delete ifs;
