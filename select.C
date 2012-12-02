@@ -57,6 +57,8 @@ const Status QU_Select(const string & result,
   AttrDesc projNamesArray[projCnt];
   AttrDesc *attrDesc;
   int reclen = 0;
+
+  attrDesc = (AttrDesc*) malloc(sizeof(AttrDesc));
     
   //i think this should be done on the result table
   status = attrCat->getRelInfo(result, attrCnt, attrs);
@@ -66,7 +68,11 @@ const Status QU_Select(const string & result,
   //converting the projNames attrInfo array into an array of AttrDesc
   for(int i = 0; i < projCnt; i++){
     for(int j = 0; j < attrCnt; j++){
-      if(projNames[i].attrName == attrs[j].attrName){
+
+      //Compares the two attrNames returns 0 if they are equal
+      int strcomp = strcmp(projNames[i].attrName, attrs[j].attrName);
+
+      if( strcomp == 0){
         memcpy(&(projNamesArray[j]), &(attrs[j]), sizeof(AttrDesc));
         //length of a record in our projection talbe
         reclen += attrs[j].attrLen;
@@ -76,12 +82,12 @@ const Status QU_Select(const string & result,
 
   //if attr is NULL we still need an attrDesc over so we have relation name
   if(attr == NULL){
-    memcpy(attrDesc, &(attrs[0]), sizeof(AttrDesc));
+    memcpy(attrDesc, &(projNames[0]), sizeof(AttrDesc));
   } else {  
     //else we need to find the matching attrDesc to convert from info to desc
     for(int i = 0; i < attrCnt; i++){
-      if(attr->attrName == attrs[i].attrName){
-        memcpy(attrDesc, &(attrs[i]), sizeof(AttrDesc));
+      if(attr->attrName == projNames[i].attrName){
+        memcpy(attrDesc, &(projNames[i]), sizeof(AttrDesc));
       }
     }
   }
@@ -120,7 +126,7 @@ const Status ScanSelect(const string & result,
     
   //convert from C string to C++ String
   string strBTRelName(attrDesc->relName);
-    
+
   hfs = new HeapFileScan(strBTRelName, status);
   if(status != OK) {return status;}
   
@@ -128,24 +134,25 @@ const Status ScanSelect(const string & result,
   if(status != OK) return status;
 
     
-    cout << "clear skys" << endl;
-    
+  cout << "clear skys" << endl;
   //start scan seraching for the attrDesc that matches the filter and op
   status = hfs->startScan(attrDesc->attrOffset,attrDesc->attrLen, (Datatype) attrDesc->attrType, filter, op);
-    if(status != OK){ 
-        cout << "bad weather " << endl; 
-        return status;}
+  if(status != OK){ 
+    cout << "bad weather " << endl; 
+    return status;
+  }
     
   status = attrCat->getRelInfo(strBTRelName, attrCnt, attrs);
-    if (status != OK){
-        cout << attrDesc->relName[0] <<endl;
-        cout << "broken mast " << endl; 
-        return status;}
+  if (status != OK){
+    cout << attrDesc->relName[0] <<endl;
+    cout << "broken mast " << endl; 
+    return status;
+  }
 
   //white not at the end of the file
   while((status = hfs->scanNext(rid)) != FILEEOF)
   {
-      cout << "land ho!" << endl;
+    cout << "land ho!" << endl;
     if(status != OK) return status;
       
     //get the next tuple that matches our condition
@@ -164,10 +171,17 @@ const Status ScanSelect(const string & result,
     {
       for(int j = 0; j < attrCnt; j++)
       {
-        if(projNames[i].attrName == attrs[j].attrName)
+        int strcomp = strcmp(projNames[i].attrName, attrs[j].attrName);
+
+        if(strcomp == 0)
         {
-          memcpy((&tuple)+tupleOffset,(&rec.data)+recOffset, projNames[i].attrLen);
+          void *tupleOffsetPtr = (void *) (((char*) tuple) + tupleOffset);
+          void *dataOffset = (void *) (((char *) &rec.data) + recOffset);
+          cout << "seg?" << endl;
+          memcpy(tupleOffsetPtr, dataOffset, projNames[i].attrLen);
+          cout << "seg1" << endl;
           tupleOffset += projNames[i].attrLen;
+          cout << "seg2" << endl;
         }
       }
       recOffset += projNames[i].attrOffset;
