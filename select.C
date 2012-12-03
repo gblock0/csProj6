@@ -40,18 +40,6 @@ const Status QU_Select(const string & result,
  // Qu_Select sets up things and then calls ScanSelect to do the actual work
   cout << "Doing QU_Select " << endl;
 
-
-    //what if attrValue == NULL
-    
-  /*
-   * 1. Convert projnames to AttrDesc and convert attr to AttrDesc
-   *  a. getRelInfo to get an attrs array which we can then check the attrName of the original arrays against
-   *  b. If the attrName is the same add the info from attrs to the appropriate array
-   * 2. convert attrValue to int and set to reclen using atoi
-   * 3. Call ScanSelect
-   */
-
-
   int attrCnt;
   AttrDesc *attrs;
   AttrDesc projNamesArray[projCnt];
@@ -83,14 +71,16 @@ const Status QU_Select(const string & result,
         //length of a record in our projection talbe
         reclen += attrs[j].attrLen;
         //this is slightly bootleg, because it just overwrites 
-          memcpy(&(projNamesArray[i].relName), &(projNames[i].relName), sizeof(projNames[i].relName));
-          //set offset
-          
-          
+        memcpy(&(projNamesArray[i].relName), &(projNames[i].relName), sizeof(projNames[i].relName));          
         }
       }
     }
 
+    int bigTableAttrCnt;
+    AttrDesc *bigTableAttrs;
+    
+    status = attrCat->getRelInfo(bigTable,bigTableAttrCnt, bigTableAttrs);
+    
   //if attr is NULL we still need an attrDesc over so we can use relName
   if(attr == NULL){
     memcpy(attrDesc, &(projNames[0]), sizeof(AttrDesc));
@@ -98,8 +88,17 @@ const Status QU_Select(const string & result,
   } else {  
     //else we need to find the matching attrDesc to convert from info to desc
       cout << "in loop" << endl;
-    for(int i = 0; i < projCnt; i++){
-      strcomp = strcmp(attr->attrName, projNamesArray[i].attrName);
+    for(int i = 0; i < bigTableAttrCnt; i++){
+      
+        strcomp = strcmp(attr->attrName, bigTableAttrs[i].attrName);
+        
+        if(strcomp == 0)
+        {
+            memcpy(attrDesc, &(bigTableAttrs[i]), sizeof(AttrDesc));
+        }
+        
+        
+        /*strcomp = strcmp(attr->attrName, projNamesArray[i].attrName);
         
         string s1(attr->attrName);
         string s2(projNamesArray[i].attrName);
@@ -110,6 +109,7 @@ const Status QU_Select(const string & result,
           cout << "found something in loop" << endl;
         memcpy(attrDesc, &(projNamesArray[i]), sizeof(AttrDesc));
       }
+       */
     }
   }
     
@@ -198,8 +198,8 @@ const Status ScanSelect(const string & result,
     cout << "broken mast " << endl; 
     return status;
   }
-    
-    
+
+    /*
     //boot leg fix for offset
     int offsetTest;
     for(int i = 0; i < attrCnt; i++){
@@ -210,8 +210,9 @@ const Status ScanSelect(const string & result,
             cout << "new offset: " << offsetTest <<endl;
         }
     }
+     */
     
-  status = hfs->startScan( (const int) offsetTest,attrDesc->attrLen,(Datatype) attrDesc->attrType, filter, op);
+  status = hfs->startScan( attrDesc->attrOffset,attrDesc->attrLen,(Datatype) attrDesc->attrType, filter, op);
   if(status != OK){ 
     cout << "bad weather " << endl; 
     return status;
