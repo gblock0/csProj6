@@ -29,14 +29,13 @@ const Status QU_Insert(const string & relation,
   int tupleSize;
   void *tuplePtr;
   int tupleOffset;
-    void *tupleOffsetPtr;
-
-    cout << "in insert" << endl;
+  void *tupleOffsetPtr;
+  char *attrValue;
+  int intCast;
+  float floatCast;  
     
-    ifs= new InsertFileScan(relation, status);
-    if(status != OK) return status;
-    
-    cout << "after ifs creation" << endl;
+  ifs= new InsertFileScan(relation, status);
+  if(status != OK) return status;
     
   //Check to make sure there are attributes in the attrList
   if(attrCnt == 0 || sizeof(attrList) == 0){
@@ -44,76 +43,81 @@ const Status QU_Insert(const string & relation,
     return FILEEOF;
   }
 
-    cout << "after check on attributes in attrList" << endl;
-
   //Get attribute data
   status = attrCat->getRelInfo(relation, realCnt, attrs);
   if (status != OK) return status;
-
-    cout << "got rel info" << endl;
+    
+  //mismatch in # of attributes to be inserted and # of total attributes
+  if(realCnt != attrCnt)
+  {
+      /* ********* need to make new error statement *****/
+      return FILEEOF;
+  }
     
   //calculate size of a new tuple
-    tupleSize = 0;
-    for(int i= 0; i < realCnt; i++)
-    {
-        tupleSize += attrs[i].attrLen;
-    }
-    
-    cout << "after size calculation" << endl;
+  tupleSize = 0;
+  for(int i= 0; i < realCnt; i++)
+  {
+    tupleSize += attrs[i].attrLen;
+  }
     
   tuplePtr = malloc(tupleSize);
-    //need to add malloc error status 
-    if(tuplePtr == NULL)ASSERT(false);
-  
-    cout << "after malloc" << endl;
+  //need to add malloc error status 
+  if(tuplePtr == NULL)ASSERT(false);
     
+  //because the order of attrList may not match the order of the actual
+  //layout of the attributes in the table we will do double loop to match up
   tupleOffset = 0; 
   for(int i = 0; i < realCnt; i++){
     for(int j = 0; j < attrCnt; j++){
+      
+      //the match between attrs and attrList
       strComp = strcmp(attrs[i].attrName, attrList[j].attrName); 
-      cout << " i dont think your like this" << endl;
-      string s1(attrs[i].attrName);
-      cout << s1<< endl;
-      string s2(attrList[j].attrName);
-      cout << s2 << endl;
-      cout << attrList[j].attrLen << endl;
         
       if(strComp == 0){
-        //get offset
-        cout << "are you even here?" << endl;
           
-        if(attrList[j].attrLen == NULL)
-        {
-          //need to make new return status
-          cout << "null value" << endl;
-          return FILEEOF;
+        //does not support the NULL values NEED TO CHANGE RETURN VALUE
+        if(attrList[j].attrValue == NULL) return FILEEOF;
+        
+        //calculate offset
+        tupleOffsetPtr = (void*) (((char*) tuplePtr) + tupleOffset);
+        
+        //cast integer and float values
+        switch (attrs[i].attrType) {
+          case INTEGER:
+            intCast = atoi((char*) attrList[j].attrValue);
+            attrValue = (char *) &intCast;
+            break;
+          case FLOAT:
+            floatCast = atof((char *)attrList[j].attrValue);
+            attrValue = (char *) &floatCast;
+            break;
+          default:
+            attrValue = (char*) attrList[j].attrValue;
+            break;
         }
           
-        tupleOffsetPtr = (void*) (((char*) tuplePtr) + tupleOffset);
-        //copy data into new tuple
-          cout << attrList[j].attrLen << endl;
-        memcpy(tupleOffsetPtr, &(attrList[j].attrValue), attrList[j].attrLen);
-          cout << "dont be like this" << endl;
-        //add to offset
-        tupleOffset += attrList[j].attrLen;
+        //copy the value into the new tuple
+        memcpy(tupleOffsetPtr, attrValue,  attrs[i].attrLen);
+        
+        tupleOffset += attrs[i].attrLen;
         break;
       }
     }
-  }
+  }    
   
-    cout << "after tuple reation" << endl;
+  //initalize record with tuple and size of tuple
+  record.data = tuplePtr;
+  record.length = tupleSize;
     
-    record.data = tuplePtr;
-    record.length = tupleSize;
-    
-    status = ifs->insertRecord(record, outRid);
-    if (status != OK) return status;
+  //add the record to the table
+  status = ifs->insertRecord(record, outRid);
+  if (status != OK) return status;
 
-    free(tuplePtr);
-    delete ifs;
-    delete attrs;
+  free(tuplePtr);
+  delete ifs;
+  delete attrs;
 
   return status;
-
 }
 
