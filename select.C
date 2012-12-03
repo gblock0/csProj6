@@ -57,10 +57,12 @@ const Status QU_Select(const string & result,
   AttrDesc projNamesArray[projCnt];
   AttrDesc *attrDesc;
   int reclen = 0;
-
+  int strcomp;
+    
   attrDesc = (AttrDesc*) malloc(sizeof(AttrDesc));
     
-  //i think this should be done on the result table
+  //we need to get the attribute info for the result table 
+    //so we add the correct attributes
   status = attrCat->getRelInfo(result, attrCnt, attrs);
   if (status != OK) return status;
 
@@ -70,12 +72,14 @@ const Status QU_Select(const string & result,
     for(int j = 0; j < attrCnt; j++){
 
       //Compares the two attrNames returns 0 if they are equal
-      int strcomp = strcmp(projNames[i].attrName, attrs[j].attrName);
+      strcomp = strcmp(projNames[i].attrName, attrs[j].attrName);
 
       if( strcomp == 0){
         memcpy(&(projNamesArray[j]), &(attrs[j]), sizeof(AttrDesc));
         //length of a record in our projection talbe
         reclen += attrs[j].attrLen;
+        //this is slightly bootleg, because it just overwrites 
+          memcpy(&(projNamesArray[i].relName), &(projNames[i].relName), sizeof(projNames[i].relName));
       }
     }
   }
@@ -85,9 +89,10 @@ const Status QU_Select(const string & result,
     memcpy(attrDesc, &(projNames[0]), sizeof(AttrDesc));
   } else {  
     //else we need to find the matching attrDesc to convert from info to desc
-    for(int i = 0; i < attrCnt; i++){
-      if(attr->attrName == projNames[i].attrName){
-        memcpy(attrDesc, &(projNames[i]), sizeof(AttrDesc));
+    for(int i = 0; i < projCnt; i++){
+      strcomp = strcmp(attr->attrName, projNamesArray[i].attrName);
+      if(strcomp == 0){
+        memcpy(attrDesc, &(projNamesArray[i]), sizeof(AttrDesc));
       }
     }
   }
@@ -119,16 +124,20 @@ const Status ScanSelect(const string & result,
   Record rec;
   Record newRec;
   RID rid;
-  int tupleOffset;
+  //int tupleOffset;
   void *tuple;
   int attrCnt;
   AttrDesc *attrs;
     
   //convert from C string to C++ String
   string strBTRelName(attrDesc->relName);
-
+    string goodName(projNames[0].relName);
+    
+    cout << result << endl;
+  cout << goodName << endl;
+    
   hfs = new HeapFileScan(strBTRelName, status);
-  if(status != OK) {return status;}
+  if(status != OK) return status;
   
   ifs = new InsertFileScan(result, status);
   if(status != OK) return status;
@@ -136,7 +145,23 @@ const Status ScanSelect(const string & result,
     
   cout << "clear skys" << endl;
   //start scan seraching for the attrDesc that matches the filter and op
-  status = hfs->startScan(attrDesc->attrOffset,attrDesc->attrLen, (Datatype) attrDesc->attrType, filter, op);
+ 
+    /*
+    if(filter != NULL)
+    {
+    
+      cout << "SCAN THE WATERS" << endl;
+      cout << attrDesc->attrOffset << endl;
+      cout << attrDesc->attrLen << endl;
+      cout << (attrDesc->attrType) << endl;
+      string s5(filter);
+       cout << s5 << endl;
+        cout << op << endl;
+    }*/
+    
+    //filter should be fine, op should be fine
+    
+  status = hfs->startScan(attrDesc->attrOffset,attrDesc->attrLen,(Datatype) attrDesc->attrType, filter, op);
   if(status != OK){ 
     cout << "bad weather " << endl; 
     return status;
@@ -152,7 +177,6 @@ const Status ScanSelect(const string & result,
   //white not at the end of the file
   while((status = hfs->scanNext(rid)) != FILEEOF)
   {
-    cout << "land ho!" << endl;
     if(status != OK) return status;
       
     //get the next tuple that matches our condition
@@ -164,27 +188,32 @@ const Status ScanSelect(const string & result,
     if (tuple == NULL) {
       //TO DO put in a malloc error for status
       //return (status = "MALLOC ERROR");
+      ASSERT(false);
     }
-      
+    
+    int strcomp;
     int recOffset = 0;
+    int tupleOffset = 0;
     for(int i = 0; i < projCnt; i++)
     {
       for(int j = 0; j < attrCnt; j++)
       {
-        int strcomp = strcmp(projNames[i].attrName, attrs[j].attrName);
-
+        strcomp = strcmp(projNames[i].attrName, attrs[j].attrName);
+        //something is wrong with the values of recOffset and tupleOffset 
         if(strcomp == 0)
         {
-          void *tupleOffsetPtr = (void *) (((char*) tuple) + tupleOffset);
-          void *dataOffset = (void *) (((char *) &rec.data) + recOffset);
-          cout << "seg?" << endl;
+            recOffset = attrs[j].attrOffset;
+            //cout<< "tuple: " << tuple << endl;
+            //cout << "tupple offset: " << tupleOffset << endl;
+            //cout << "rec.data: " << (rec.data) << endl;
+            //cout << "rec offset: " << recOffset << endl;
+            //cout << "int i: " << i << " int j: " << j << endl;
+            void *tupleOffsetPtr = (void *) (((char*) tuple) + tupleOffset);
+          void *dataOffset = (void *) (((char *) rec.data) + recOffset);
           memcpy(tupleOffsetPtr, dataOffset, projNames[i].attrLen);
-          cout << "seg1" << endl;
-          tupleOffset += projNames[i].attrLen;
-          cout << "seg2" << endl;
+         tupleOffset += projNames[i].attrLen; 
         }
       }
-      recOffset += projNames[i].attrOffset;
     }
     newRec.data = tuple;
     newRec.length = reclen;
@@ -199,5 +228,7 @@ const Status ScanSelect(const string & result,
   delete hfs;
   delete ifs;
   delete attrs; 
+    
+    cout << "POOP DECK HAS BEEN SWABBED" << endl;
   return status;
 }
