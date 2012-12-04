@@ -174,9 +174,7 @@ const Status ScanSelect(const string & result,
     //get a piece of memeory the size of a record
     tuple = malloc(reclen);
     if (tuple == NULL) {
-      //TO DO put in a malloc error for status
-      //return (status = "MALLOC ERROR");
-      ASSERT(false);
+      return UNIXERR;
     }
 
     int strcomp;

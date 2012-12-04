@@ -39,8 +39,7 @@ const Status QU_Insert(const string & relation,
 
   //Check to make sure there are attributes in the attrList
   if(attrCnt == 0 || sizeof(attrList) == 0){
-    /* **************NEED TO CHANGE to another error********** */
-    return FILEEOF;
+    return BADINDEXPARM;
   }
 
   //Get attribute data
@@ -50,8 +49,7 @@ const Status QU_Insert(const string & relation,
   //mismatch in # of attributes to be inserted and # of total attributes
   if(realCnt != attrCnt)
   {
-    /* ********* need to make new error statement *****/
-    return FILEEOF;
+    return BADINDEXPARM;
   }
 
   //calculate size of a new tuple
@@ -76,8 +74,8 @@ const Status QU_Insert(const string & relation,
 
       if(strComp == 0){
 
-        //does not support the NULL values NEED TO CHANGE RETURN VALUE
-        if(attrList[j].attrValue == NULL) return FILEEOF;
+        //does not support the NULL values
+        if(attrList[j].attrValue == NULL) return BADINDEXPARM;
 
         //calculate offset
         tupleOffsetPtr = (void*) (((char*) tuplePtr) + tupleOffset);
