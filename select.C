@@ -182,6 +182,7 @@ const Status ScanSelect(const string & result,
     int strcomp;
     int recOffset = 0;
     int tupleOffset = 0;
+    //Matching projection atrribute into a new tuple
     for(int i = 0; i < projCnt; i++)
     {
       for(int j = 0; j < attrCnt; j++)
@@ -190,9 +191,12 @@ const Status ScanSelect(const string & result,
         //something is wrong with the values of recOffset and tupleOffset 
         if(strcomp == 0)
         {
+          //calculate offset into tuple
           recOffset = attrs[j].attrOffset;
           void *tupleOffsetPtr = (void *) (((char*) tuple) + tupleOffset);
           void *dataOffset = (void *) (((char *) rec.data) + recOffset);
+
+          //copies the data from the original relation into the result relation
           memcpy(tupleOffsetPtr, dataOffset, projNames[i].attrLen);
           tupleOffset += projNames[i].attrLen; 
         }
