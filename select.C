@@ -4,12 +4,12 @@
 
 // forward declaration
 const Status ScanSelect(const string & result, 
-    const int projCnt, 
-    const AttrDesc projNames[],
-    const AttrDesc *attrDesc, 
-    const Operator op, 
-    const char *filter,
-    const int reclen);
+      const int projCnt, 
+      const AttrDesc projNames[],
+      const AttrDesc *attrDesc, 
+      const Operator op, 
+      const char *filter,
+      const int reclen);
 
 /*
  * Selects records from the specified relation.
@@ -30,11 +30,11 @@ const Status ScanSelect(const string & result,
  *   You can use the atoi() function to convert a char* to an integer and atof() to convert it to a float. 
  *   If attr is NULL, an unconditional scan of the input table should be performed. */
 const Status QU_Select(const string & result, 
-    const int projCnt, 
-    const attrInfo projNames[],
-    const attrInfo *attr, 
-    const Operator op, 
-    const char *attrValue)
+      const int projCnt, 
+      const attrInfo projNames[],
+      const attrInfo *attr, 
+      const Operator op, 
+      const char *attrValue)
 {
   Status status;
   // Qu_Select sets up things and then calls ScanSelect to do the actual work
@@ -105,12 +105,12 @@ const Status QU_Select(const string & result,
 const Status ScanSelect(const string & result, 
 #include "stdio.h"
 #include "stdlib.h"
-    const int projCnt, 
-    const AttrDesc projNames[],
-    const AttrDesc *attrDesc, 
-    const Operator op, 
-    const char *filter,
-    const int reclen)
+      const int projCnt, 
+      const AttrDesc projNames[],
+      const AttrDesc *attrDesc, 
+      const Operator op, 
+      const char *filter,
+      const int reclen)
 {
   cout << "Doing HeapFileScan Selection using ScanSelect()" << endl;
   Status status;
