@@ -34,7 +34,7 @@ const Status QU_Delete(const string & relation,
   }
   
 
-
+  //check type and cast accordingly
   if(type == INTEGER){
     tempInt = atoi(attrValue);
     attrValue = (char *) &tempInt;

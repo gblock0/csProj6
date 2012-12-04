@@ -4,12 +4,12 @@
 
 // forward declaration
 const Status ScanSelect(const string & result, 
-			const int projCnt, 
-			const AttrDesc projNames[],
-			const AttrDesc *attrDesc, 
-			const Operator op, 
-			const char *filter,
-			const int reclen);
+    const int projCnt, 
+    const AttrDesc projNames[],
+    const AttrDesc *attrDesc, 
+    const Operator op, 
+    const char *filter,
+    const int reclen);
 
 /*
  * Selects records from the specified relation.
@@ -30,14 +30,14 @@ const Status ScanSelect(const string & result,
  *   You can use the atoi() function to convert a char* to an integer and atof() to convert it to a float. 
  *   If attr is NULL, an unconditional scan of the input table should be performed. */
 const Status QU_Select(const string & result, 
-		       const int projCnt, 
-		       const attrInfo projNames[],
-		       const attrInfo *attr, 
-		       const Operator op, 
-		       const char *attrValue)
+    const int projCnt, 
+    const attrInfo projNames[],
+    const attrInfo *attr, 
+    const Operator op, 
+    const char *attrValue)
 {
   Status status;
- // Qu_Select sets up things and then calls ScanSelect to do the actual work
+  // Qu_Select sets up things and then calls ScanSelect to do the actual work
   cout << "Doing QU_Select " << endl;
 
   int attrCnt;
@@ -46,14 +46,14 @@ const Status QU_Select(const string & result,
   AttrDesc *attrDesc;
   int reclen = 0;
   int strcomp;
-    
+
   attrDesc = (AttrDesc*) malloc(sizeof(AttrDesc));
-    
-    string bigTable(projNames[0].relName);
-    
-    
+
+  string bigTable(projNames[0].relName);
+
+
   //we need to get the attribute info for the result table 
-    //so we add the correct attributes
+  //so we add the correct attributes
   status = attrCat->getRelInfo(result, attrCnt, attrs);
   if (status != OK) return status;
 
@@ -69,37 +69,35 @@ const Status QU_Select(const string & result,
         memcpy(&(projNamesArray[j]), &(attrs[j]), sizeof(AttrDesc));
         //length of a record in our projection talbe
         reclen += attrs[j].attrLen;
-        //this is slightly bootleg, because it just overwrites 
-        memcpy(&(projNamesArray[i].relName), &(projNames[i].relName), sizeof(projNames[i].relName));          
-        }
+        //memcpy(&(projNamesArray[i].relName), &(projNames[i].relName), sizeof(projNames[i].relName));          
       }
     }
+  }
 
-    int bigTableAttrCnt;
-    AttrDesc *bigTableAttrs;
-    
-    status = attrCat->getRelInfo(bigTable,bigTableAttrCnt, bigTableAttrs);
-    
+  int bigTableAttrCnt;
+  AttrDesc *bigTableAttrs;
+
+  status = attrCat->getRelInfo(bigTable,bigTableAttrCnt, bigTableAttrs);
+
   //if attr is NULL we still need an attrDesc over so we can use relName
   if(attr == NULL){
     memcpy(attrDesc, &(projNames[0]), sizeof(AttrDesc));
   } else {  
     //else we need to find the matching attrDesc to convert from info to desc
     for(int i = 0; i < bigTableAttrCnt; i++){
-      
-        strcomp = strcmp(attr->attrName, bigTableAttrs[i].attrName);
-        
-        if(strcomp == 0)
-        {
-            memcpy(attrDesc, &(bigTableAttrs[i]), sizeof(AttrDesc));
-        }
+      strcomp = strcmp(attr->attrName, bigTableAttrs[i].attrName);
+      if(strcomp == 0)
+      {
+        memcpy(attrDesc, &(bigTableAttrs[i]), sizeof(AttrDesc));
+      }
     }
   }
-    
+
   status = ScanSelect(result, projCnt, projNamesArray, attrDesc, op, attrValue, reclen);
 
   delete attrs;
-    
+  delete bigTableAttrs;
+
   return status;
 }
 
@@ -107,12 +105,12 @@ const Status QU_Select(const string & result,
 const Status ScanSelect(const string & result, 
 #include "stdio.h"
 #include "stdlib.h"
-			const int projCnt, 
-			const AttrDesc projNames[],
-			const AttrDesc *attrDesc, 
-			const Operator op, 
-			const char *filter,
-			const int reclen)
+    const int projCnt, 
+    const AttrDesc projNames[],
+    const AttrDesc *attrDesc, 
+    const Operator op, 
+    const char *filter,
+    const int reclen)
 {
   cout << "Doing HeapFileScan Selection using ScanSelect()" << endl;
   Status status;
@@ -128,37 +126,37 @@ const Status ScanSelect(const string & result,
   AttrDesc *attrs;
   float tempFloat;  
   int tempInt;
-    int strcomp;
-    
+  int strcomp;
+
   //convert from C string to C++ String
   string strBTRelName(attrDesc->relName);
-    
-    
+
+
   hfs = new HeapFileScan(strBTRelName, status);
   if(status != OK) return status;
-  
+
   ifs = new InsertFileScan(result, status);
   if(status != OK) return status;
 
-    
+
   //start scan seraching for the attrDesc that matches the filter and op
- 
-    
+
+
   //check attr type and cast accordingly
   if(attrDesc->attrType == INTEGER){
     tempInt = atoi(filter);
     filter = (char *) &tempInt;
   } else if(attrDesc->attrType == FLOAT){
-        tempFloat = atof(filter);
-        filter = (char *) &tempFloat;
+    tempFloat = atof(filter);
+    filter = (char *) &tempFloat;
   }
-   
+
   status = attrCat->getRelInfo(strBTRelName, attrCnt, attrs);
   if (status != OK){
     return status;
   }
 
-    
+
   status = hfs->startScan( attrDesc->attrOffset,attrDesc->attrLen,(Datatype) attrDesc->attrType, filter, op);
   if(status != OK){ 
     return status;
@@ -168,11 +166,11 @@ const Status ScanSelect(const string & result,
   while((status = hfs->scanNext(rid)) != FILEEOF)
   {
     if(status != OK) return status;
-      
+
     //get the next tuple that matches our condition
     status = hfs->getRecord(rec);
     if(status != OK) return status;
-    
+
     //get a piece of memeory the size of a record
     tuple = malloc(reclen);
     if (tuple == NULL) {
@@ -180,7 +178,7 @@ const Status ScanSelect(const string & result,
       //return (status = "MALLOC ERROR");
       ASSERT(false);
     }
-    
+
     int strcomp;
     int recOffset = 0;
     int tupleOffset = 0;
@@ -192,11 +190,11 @@ const Status ScanSelect(const string & result,
         //something is wrong with the values of recOffset and tupleOffset 
         if(strcomp == 0)
         {
-            recOffset = attrs[j].attrOffset;
-            void *tupleOffsetPtr = (void *) (((char*) tuple) + tupleOffset);
+          recOffset = attrs[j].attrOffset;
+          void *tupleOffsetPtr = (void *) (((char*) tuple) + tupleOffset);
           void *dataOffset = (void *) (((char *) rec.data) + recOffset);
           memcpy(tupleOffsetPtr, dataOffset, projNames[i].attrLen);
-         tupleOffset += projNames[i].attrLen; 
+          tupleOffset += projNames[i].attrLen; 
         }
       }
     }
@@ -206,13 +204,13 @@ const Status ScanSelect(const string & result,
     if(status != OK) return status;
     free(tuple);
   }   
-   
+
   //status was used as loop varient, reset status to be OK
   if(status == FILEEOF) status = OK;
-  
+
   delete hfs;
   delete ifs;
   delete attrs; 
-    
+
   return status;
 }
